@@ -766,7 +766,11 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
                 processed_down_samples.append(res_sample)
                 continue
                 
-            processed_sample = self.controlnet_down_blocks[controlnet_block_idx](res_sample)
+            # Create zero-convolution dynamically with correct channel dimensions
+            in_channels = res_sample.shape[1]
+            out_channels = res_sample.shape[1]
+            zero_conv = zero_convolution(in_channels, out_channels, kernel_size=1)
+            processed_sample = zero_conv(res_sample)
             processed_down_samples.append(processed_sample)
             controlnet_block_idx += 1
         
