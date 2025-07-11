@@ -374,7 +374,6 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
 
             if not is_final_block:
                 controlnet_block = zero_convolution(output_channel, output_channel, kernel_size=1)
-
                 self.controlnet_down_blocks.append(controlnet_block)
 
         # mid
@@ -759,24 +758,20 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         # DO NOT change the code outside this part.
         # Apply zero-convolution to the residual features of each ControlNet block.
         # NOTE: Each 'controlnet_block' is used here.
-        
-        # Apply zero-convolution to down block residual samples
         processed_down_samples = []
         controlnet_block_idx = 0
         
         for i, res_sample in enumerate(down_block_res_samples):
-            if i == 0:  # Skip the first sample (input)
+            if i == 0:
                 processed_down_samples.append(res_sample)
                 continue
                 
-            # Apply zero-convolution to each residual sample
             processed_sample = self.controlnet_down_blocks[controlnet_block_idx](res_sample)
             processed_down_samples.append(processed_sample)
             controlnet_block_idx += 1
         
         down_block_res_samples = tuple(processed_down_samples)
         
-        # Apply zero-convolution to mid block residual sample
         mid_block_res_sample = self.controlnet_mid_block(sample)
         ######## TODO (3) ########
 
