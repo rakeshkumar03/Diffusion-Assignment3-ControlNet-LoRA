@@ -1316,4 +1316,3 @@ class UNet2DConditionModel(
             return (sample,)
 
         return UNet2DConditionOutput(sample=sample)
-
