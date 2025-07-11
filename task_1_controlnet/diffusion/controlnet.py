@@ -770,6 +770,8 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
             in_channels = res_sample.shape[1]
             out_channels = res_sample.shape[1]
             zero_conv = zero_convolution(in_channels, out_channels, kernel_size=1)
+            # Move zero-convolution to the same device as the input tensor
+            zero_conv = zero_conv.to(res_sample.device)
             processed_sample = zero_conv(res_sample)
             processed_down_samples.append(processed_sample)
             controlnet_block_idx += 1
