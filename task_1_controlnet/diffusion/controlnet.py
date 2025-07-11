@@ -59,7 +59,10 @@ def zero_convolution(
     # DO NOT change the code outside this part.
     # Return a zero-convolution layer,
     # with the weight & bias initialized as zeros.
-    module = None
+    module = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+    # Initialize weights and bias to zero
+    nn.init.zeros_(module.weight)
+    nn.init.zeros_(module.bias)
     ######## TODO (1) ########
 
     return module
@@ -459,7 +462,18 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         # DO NOT change the code outside this part.
         # Initialize 'controlnet' using the pretrained 'unet' model
         # NOTE: Modules to initialize: 'conv_in', 'time_proj', 'time_embedding', 'down_blocks', 'mid_block'
-
+        
+        # Copy weights from UNet to ControlNet for shared modules
+        controlnet.conv_in.load_state_dict(unet.conv_in.state_dict())
+        controlnet.time_proj.load_state_dict(unet.time_proj.state_dict())
+        controlnet.time_embedding.load_state_dict(unet.time_embedding.state_dict())
+        
+        # Copy down blocks
+        for i, down_block in enumerate(controlnet.down_blocks):
+            down_block.load_state_dict(unet.down_blocks[i].state_dict())
+        
+        # Copy mid block
+        controlnet.mid_block.load_state_dict(unet.mid_block.state_dict())
         ######## TODO (2) ########
 
         return controlnet
@@ -744,10 +758,25 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         # DO NOT change the code outside this part.
         # Apply zero-convolution to the residual features of each ControlNet block.
         # NOTE: Each 'controlnet_block' is used here.
-
-        down_block_res_samples = None
-        mid_block_res_sample = None
-
+        
+        # Apply zero-convolution to down block residual samples
+        processed_down_samples = []
+        controlnet_block_idx = 0
+        
+        for i, res_sample in enumerate(down_block_res_samples):
+            if i == 0:  # Skip the first sample (input)
+                processed_down_samples.append(res_sample)
+                continue
+                
+            # Apply zero-convolution to each residual sample
+            processed_sample = self.controlnet_down_blocks[controlnet_block_idx](res_sample)
+            processed_down_samples.append(processed_sample)
+            controlnet_block_idx += 1
+        
+        down_block_res_samples = tuple(processed_down_samples)
+        
+        # Apply zero-convolution to mid block residual sample
+        mid_block_res_sample = self.controlnet_mid_block(sample)
         ######## TODO (3) ########
 
         # 6. scaling
@@ -761,3 +790,4 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
             down_block_res_samples=down_block_res_samples, 
             mid_block_res_sample=mid_block_res_sample
         )
+
